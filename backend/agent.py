@@ -26,14 +26,20 @@ class AgentState(TypedDict):
 
 def retrieval_agent(state: AgentState) -> AgentState:
     print(">> Retrieval agent running...")
-    retriever = get_retriever(state["repo_url"])
-    docs = retriever.invoke(state["question"])
-    if "Specifically about file" in state["question"]:
-        filename = state["question"].split("Specifically about file")[
+    question = state["question"]
+    if "Specifically about file" in question:
+        filename = question.split("Specifically about file")[
             1].split(":")[0].strip()
+        retriever = get_retriever(state["repo_url"], k=20)
+        docs = retriever.invoke(question)
         filtered = [d for d in docs if filename.lower(
         ) in d.metadata.get("source", "").lower()]
         docs = filtered if filtered else docs
+    else:
+        retriever = get_retriever(state["repo_url"])
+        docs = retriever.invoke(question)
+    print(f">> Found {len(docs)} docs, sources: {
+          [d.metadata.get('source', '') for d in docs]}")
     state["retrieved_chunks"] = [doc.page_content for doc in docs]
     state["sources"] = list(
         set([doc.metadata.get("source", "") for doc in docs]))
@@ -53,7 +59,10 @@ Rules:
 - NEVER use relative links or anchor links like #section-name
 - If showing code, use proper markdown code blocks with language
 - Be direct and specific — no "probably" or "it seems"
-- Keep answers concise with bullet points for key details"""),
+- Keep answers concise with bullet points for key details
+- Only answer if the context is clearly relevant to the question
+- If the context doesn't contain relevant info, say exactly: "I couldn't find relevant information for this query. Try asking something more specific."
+"""),
         HumanMessage(content=f"""
 Context from codebase:
 {context}
@@ -71,10 +80,20 @@ Answer with specific file references where relevant.
 def citation_agent(state: AgentState) -> AgentState:
     print(">> Citation agent running...")
 
+    no_info_phrases = [
+        "couldn't find relevant information",
+        "not enough detail",
+        "insufficient context",
+        "no relevant information"
+    ]
+
+    answer_lower = state["answer"].lower()
+    if any(phrase in answer_lower for phrase in no_info_phrases):
+        return state
+
     IGNORE_PATTERNS = [
-        'test/fixtures', 'node_modules', '.txt',
-        'History.md', 'Readme.md', 'README.md',
-        'LICENSE', 'CHANGELOG', '.gitignore'
+        'test/fixtures', 'node_modules',
+        'History.md', 'LICENSE', 'CHANGELOG', '.gitignore'
     ]
 
     filtered_sources = [
@@ -83,7 +102,7 @@ def citation_agent(state: AgentState) -> AgentState:
     ]
 
     if not filtered_sources:
-        filtered_sources = state["sources"][:3]
+        filtered_sources = state["sources"][:5]
 
     sources_formatted = "\n".join([f"- `{s}`" for s in filtered_sources])
     state["answer"] = f"{state['answer']
@@ -94,26 +113,16 @@ def citation_agent(state: AgentState) -> AgentState:
 def followup_agent(state: AgentState) -> AgentState:
     print(">> Follow-up agent running...")
     messages = [
-        SystemMessage(content="""You are an expert software engineer and codebase guide.
-Answer questions about code clearly and in a well-structured format.
+        SystemMessage(content="""You are a helpful assistant. Given a question and answer about a codebase,
+generate exactly 3 short follow-up questions a developer might ask next.
+Return ONLY a JSON array of 3 strings. No preamble, no markdown, just the array.
+Example: ["How is X tested?", "Where is Y configured?", "What happens when Z fails?"]"""),
+        HumanMessage(content=f"""
+Question asked: {state["question"]}
+Answer given: {state["answer"][:500]}
 
-Response format rules:
-- Start with a 1-2 sentence direct answer to the question
-- Then use ## sections with clear headings where relevant
-- Use bullet points for lists of items
-- Use proper markdown code blocks with language tag for ALL code snippets like:
-```python
-  def example():
-      pass
-```
-- Bold **key terms** and **file names** when first mentioned
-- End with a "## Key takeaway" section with 1 sentence summary
-- NEVER use relative links like [text](#anchor)
-- NEVER say "probably" or "it seems" — be direct and confident
-- Cite specific file paths inline like: found in **`/lib/router.js`**
-- Keep total response under 400 words unless code examples require more
-- If context is insufficient, say: "The provided context doesn't have enough detail on this. Try asking about: [suggest 2 specific related questions]"
-"""),
+Generate 3 follow-up questions.
+""")
     ]
     try:
         response = llm.invoke(messages)

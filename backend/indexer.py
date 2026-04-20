@@ -75,7 +75,7 @@ def index_repo(repo_url: str) -> int:
         return len(chunks)
 
 
-def get_retriever(repo_url: str):
+def get_retriever(repo_url: str, k: int = 8):
     repo_id = get_repo_id(repo_url)
     collection_path = f"{CHROMA_DIR}/{repo_id}"
     embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
@@ -83,4 +83,4 @@ def get_retriever(repo_url: str):
         persist_directory=collection_path,
         embedding_function=embeddings
     )
-    return vectorstore.as_retriever(search_kwargs={"k": 8})
+    return vectorstore.as_retriever(search_kwargs={"k": k})

@@ -29,6 +29,8 @@ function App() {
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatAreaRef = useRef<HTMLDivElement>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editText, setEditText] = useState('');
 
   const [repoHistory, setRepoHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem('repochat_history');
@@ -299,7 +301,11 @@ function App() {
                 onClick={() => {
                   setIndexedRepo('');
                   setMessages([]);
+                  setIndexedRepo(repoUrl);
                   setRepoUrl('');
+                  setRepoHistory((prev) =>
+                    prev.includes(repoUrl) ? prev : [...prev, repoUrl]
+                  );
                   setRepoHistory([]);
                   localStorage.clear();
                 }}
@@ -364,56 +370,52 @@ function App() {
                 }}
               >
                 {msg.role === 'ai' && <div style={styles.aiAvatar}>RC</div>}
-                <div style={{ maxWidth: '75%' }}>
-                  {msg.role === 'ai' && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'flex-end',
-                        marginBottom: '4px',
-                      }}
-                    >
-                      <button
-                        onClick={() =>
-                          navigator.clipboard.writeText(msg.content)
-                        }
+                {msg.role === 'ai' && (
+                  <div style={{ maxWidth: '75%' }}>
+                    {msg.role === 'ai' && (
+                      <div
                         style={{
-                          background: 'transparent',
-                          border: 'none',
-                          padding: '4px 6px',
-                          cursor: 'pointer',
-                          color: '#484f58',
                           display: 'flex',
-                          alignItems: 'center',
-                          borderRadius: '6px',
+                          justifyContent: 'flex-end',
+                          marginBottom: '4px',
                         }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.color = '#8b949e')
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.color = '#484f58')
-                        }
                       >
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
+                        <button
+                          onClick={() =>
+                            navigator.clipboard.writeText(msg.content)
+                          }
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            padding: '4px 6px',
+                            cursor: 'pointer',
+                            color: '#484f58',
+                            display: 'flex',
+                            alignItems: 'center',
+                            borderRadius: '6px',
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.color = '#8b949e')
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.color = '#484f58')
+                          }
                         >
-                          <rect x="9" y="9" width="13" height="13" rx="2" />
-                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
-                  <div
-                    style={
-                      msg.role === 'user' ? styles.userBubble : styles.aiBubble
-                    }
-                  >
-                    {msg.role === 'ai' ? (
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <rect x="9" y="9" width="13" height="13" rx="2" />
+                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                    <div style={styles.aiBubble}>
                       <ReactMarkdown
                         components={{
                           code({ className, children, ...props }: any) {
@@ -465,31 +467,218 @@ function App() {
                       >
                         {msg.content}
                       </ReactMarkdown>
-                    ) : (
-                      msg.content
+                    </div>
+                    {msg.content && (
+                      <div
+                        style={{
+                          marginTop: '8px',
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: '5px',
+                        }}
+                      >
+                        {msg.content
+                          .match(/`(\/[^`]+)`/g)
+                          ?.filter((v, idx, a) => a.indexOf(v) === idx)
+                          .map((match, idx) => {
+                            const filePath = match.replace(/`/g, '');
+                            const githubUrl = indexedRepo
+                              ? `${indexedRepo}/blob/main${filePath}`
+                              : '#';
+                            return (
+                              <a
+                                key={idx}
+                                href={githubUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  background: '#7F77DD15',
+                                  border: '0.5px solid #534AB730',
+                                  borderRadius: '20px',
+                                  padding: '3px 10px',
+                                  fontSize: '10px',
+                                  color: '#AFA9EC',
+                                  fontFamily: 'monospace',
+                                  textDecoration: 'none',
+                                }}
+                                onMouseEnter={(e) =>
+                                  (e.currentTarget.style.background =
+                                    '#7F77DD25')
+                                }
+                                onMouseLeave={(e) =>
+                                  (e.currentTarget.style.background =
+                                    '#7F77DD15')
+                                }
+                              >
+                                📄 {filePath}
+                              </a>
+                            );
+                          })}
+                      </div>
+                    )}
+                    {msg.followups && msg.followups.length > 0 && (
+                      <div
+                        style={{
+                          marginTop: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '5px',
+                        }}
+                      >
+                        {msg.followups.map((q, idx) => (
+                          <div
+                            key={idx}
+                            style={styles.followupChip}
+                            onClick={() => handleChat(q)}
+                          >
+                            ↗ {q}
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  {msg.followups && msg.followups.length > 0 && (
-                    <div
-                      style={{
-                        marginTop: '8px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '5px',
-                      }}
-                    >
-                      {msg.followups.map((q, idx) => (
+                )}
+
+                {msg.role === 'user' && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-end',
+                      maxWidth: '75%',
+                    }}
+                  >
+                    {editingIndex === i ? (
+                      <div style={{ width: '100%' }}>
+                        <textarea
+                          autoFocus
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              if (editText.trim()) {
+                                setMessages(messages.slice(0, i));
+                                setEditingIndex(null);
+                                handleChat(editText.trim());
+                              }
+                            }
+                            if (e.key === 'Escape') setEditingIndex(null);
+                          }}
+                          style={{
+                            width: '100%',
+                            background: '#1D2D3E',
+                            border: '0.5px solid #7F77DD',
+                            borderRadius: '12px',
+                            padding: '10px 14px',
+                            fontSize: '13px',
+                            color: '#e6edf3',
+                            outline: 'none',
+                            resize: 'none' as const,
+                            lineHeight: 1.7,
+                            minHeight: '60px',
+                            fontFamily:
+                              '-apple-system, BlinkMacSystemFont, sans-serif',
+                          }}
+                        />
                         <div
-                          key={idx}
-                          style={styles.followupChip}
-                          onClick={() => handleChat(q)}
+                          style={{
+                            display: 'flex',
+                            gap: '6px',
+                            marginTop: '6px',
+                            justifyContent: 'flex-end',
+                          }}
                         >
-                          ↗ {q}
+                          <button
+                            onClick={() => setEditingIndex(null)}
+                            style={{
+                              background: 'transparent',
+                              border: '0.5px solid #30363d',
+                              borderRadius: '6px',
+                              padding: '4px 12px',
+                              fontSize: '11px',
+                              color: '#8b949e',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (editText.trim()) {
+                                setMessages(messages.slice(0, i));
+                                setEditingIndex(null);
+                                handleChat(editText.trim());
+                              }
+                            }}
+                            style={{
+                              background: '#7F77DD',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '4px 12px',
+                              fontSize: '11px',
+                              color: 'white',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Send
+                          </button>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-end',
+                        }}
+                      >
+                        <div style={styles.userBubble}>{msg.content}</div>
+                        <button
+                          onClick={() => {
+                            setEditingIndex(i);
+                            setEditText(msg.content);
+                          }}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            padding: '3px 6px',
+                            marginTop: '3px',
+                            cursor: 'pointer',
+                            color: '#484f58',
+                            fontSize: '11px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.color = '#8b949e')
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.color = '#484f58')
+                          }
+                        >
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
+                          Edit
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {msg.role === 'user' && <div style={styles.userAvatar}>AC</div>}
               </div>
             ))}
