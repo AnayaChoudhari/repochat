@@ -18,16 +18,19 @@ New engineers typically spend 1-2 weeks reading through an unfamiliar codebase b
 
 ## Features
 
-- **Multi-agent pipeline** — 4 specialized LangGraph agents handle retrieval, reasoning, citation, and follow-up generation independently
+- **Multi-agent pipeline** - 4 specialized LangGraph agents handle retrieval, reasoning, citation and follow-up generation independently
 - **Semantic search** — ChromaDB vector store with sentence-transformer embeddings for accurate chunk retrieval
 - **Syntax highlighted answers** — Code blocks rendered with language-specific syntax highlighting
-- **Cited sources** — Every answer includes exact file paths from the indexed repository
+- **Cited sources** — Every answer includes exact file paths linked directly to GitHub
 - **Follow-up suggestions** — Agent automatically generates 3 contextual follow-up questions after each answer
+- **Edit messages** — Edit any previous question and rerun the conversation from that point, just like Claude
 - **Per-repo chat history** — Each indexed repository maintains its own persistent conversation history
 - **File-specific filtering** — Filter queries to a specific file for targeted answers
 - **Multi-repo support** — Index and switch between multiple repositories in one session
 - **Typing animation** — Streamed token-by-token response rendering
 - **Indexing progress bar** — Real-time progress indicator with stage labels during indexing
+- **Auto-scroll** — Chat automatically scrolls to latest message with a jump-to-bottom button
+- **Copy answers** — One-click copy button on every AI response
 
 ---
 
@@ -168,7 +171,7 @@ Local embedding generation with all-MiniLM-L6-v2 eliminates API costs for the in
 
 - Currently supports public GitHub repositories only
 - Large repositories (10,000+ files) may take several minutes to index
-- Answers are grounded in indexed chunks — very recent commits may not be reflected
+- Answers are grounded in indexed chunks, very recent commits may not be reflected
 
 ---
 
