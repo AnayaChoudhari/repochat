@@ -10,6 +10,10 @@ Built with a 4-agent LangGraph pipeline, semantic vector search, and a clean dar
 
 ---
 
+## App Preview
+
+Live Website: **https://repochat-rouge.vercel.app/**
+
 ## Problem Statement
 
 New engineers typically spend 1-2 weeks reading through an unfamiliar codebase before becoming productive. Existing tools like GitHub Copilot only assist with code completion — they cannot answer questions about a private, internal, or unfamiliar repository they have never seen. RepoChat solves this by indexing any repo on demand and enabling conversational Q&A with full source citations.
