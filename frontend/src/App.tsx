@@ -5,7 +5,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import './App.css';
 
-const API = 'http://127.0.0.1:8000';
+const API = 'https://anaya01-repochat.hf.space';
 
 interface Message {
   role: 'user' | 'ai';

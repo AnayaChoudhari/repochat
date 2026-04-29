@@ -38,12 +38,14 @@ def retrieval_agent(state: AgentState) -> AgentState:
     else:
         retriever = get_retriever(state["repo_url"])
         docs = retriever.invoke(question)
-    print(f">> Found {len(docs)} docs, sources: {
-          [d.metadata.get('source', '') for d in docs]}")
-    state["retrieved_chunks"] = [doc.page_content for doc in docs]
-    state["sources"] = list(
-        set([doc.metadata.get("source", "") for doc in docs]))
-    return state
+    sources = [d.metadata.get('source') for d in docs]
+
+
+print(f">> Found {len(docs)} docs, sources: {sources}")
+state["retrieved_chunks"] = [doc.page_content for doc in docs]
+state["sources"] = list(
+    set([doc.metadata.get("source", "") for doc in docs]))
+return state
 
 
 def reasoning_agent(state: AgentState) -> AgentState:
